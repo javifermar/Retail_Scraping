@@ -1,10 +1,7 @@
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
 # coding: utf-8
 
-# In[41]:
 
-
-print('Iniciando Scraper')
 import zipfile
 import os
 from selenium import webdriver
@@ -16,7 +13,16 @@ from pathlib import Path
 import pandas as pd
 from selenium.webdriver.support.ui import Select
 
+print('Iniciando Scraper')
 driver = webdriver.Chrome(executable_path=r'C:\Chromedriver\chromedriver.exe')
+#Antes de nada vamos a listar el fichero "robots.txt"
+driver.get('http://gadisline.com/robots.txt')
+robots_txt = driver.find_element_by_xpath("//body")
+print("==================================================")
+print("=        CONTENIDO DEL FICHERO ROBOTS.TXT        =")
+print("==================================================")
+print(robots_txt.text)
+print("==================================================")
 #Abrimos la URL deseada, en nuestro caso gadisline.com
 driver.get('http://gadisline.com')
 
@@ -51,6 +57,34 @@ botonContinuar = driver.find_element_by_class_name('btn.principal_btn.btn_new_cl
 
 print("Entrando en la página de Gadisline donde se encuentran los precios...")
 
+#Temporizamos 3 segundos para dar tiempo a cargar la siguiente página
+time.sleep(3)
 
-time.sleep(2)
+
+#Ahora hay un menú por categorías de productos al que podemos pinchar para acceder a los productos
+#ultramarinos
+a=driver.find_element_by_xpath("//a[@id='a-11']")
+driver.execute_script("arguments[0].click();", a)
+#azucar/edulcorantes
+a=driver.find_element_by_xpath("//a[@id='level2_0']")
+driver.execute_script("arguments[0].click();", a)
+#azucar
+a=driver.find_element_by_xpath("//a[@id='child-111010']")
+driver.execute_script("arguments[0].click();", a)
+#producto
+#a=driver.find_element_by_xpath("//a[@id='5410079']")
+#driver.execute_script("arguments[0].click();", a)
+
+# Hemos sido capaces de pichar en:
+#  - Ultramarinos
+#    - Azúcar / edulcorantes
+#      - Azúcar
+# Y en este momento estamos ya en una página con una serie de artículos
+
+print("La nueva dirección URL donde nos encontramos es:",driver.current_url)
+
+
+
+
+
 
