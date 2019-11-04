@@ -1,39 +1,56 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 # coding: utf-8
 
-# In[30]:
+# In[41]:
 
 
+print('Iniciando Scraper')
+import zipfile
+import os
 from selenium import webdriver
-from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+import time
+from datetime import datetime
+import sys
+from pathlib import Path
+import pandas as pd
+from selenium.webdriver.support.ui import Select
 
-browser = webdriver.Chrome(executable_path=r"C:\Users\ipe77\Documents\Master Data Science\05 Tipologia\chromedriver.exe")
-browser.get('https://www.gadisline.com')
+driver = webdriver.Chrome(executable_path=r'C:\Chromedriver\chromedriver.exe')
+#Abrimos la URL deseada, en nuestro caso gadisline.com
+driver.get('http://gadisline.com')
 
-#option_text='15002'
-#browser.find_element_by_xpath("//select[@class='select2-search__field']/option[text()='option_text']").click()
+# La página tiene un botón de aceptar las cookies, que vamos a simular que aceptamos para que desaparezca de ahí
+try:
+    botonAceptar = driver.find_element_by_id('removecookie')
+    botonAceptar.click()
+except:
+    pass
 
 
-# In[18]:
+#Vamos a simular que escribimos directamente en la caja del código postal.
+#Aunque realmente esto no va a llegar a funcionar, ya que es necesario pasar por el desplegable de códigos postales.
+#En este caso simulamos que introducimos el valor de 15001 para la caja del código postal.
+cajaCP = driver.find_element_by_class_name("select2-selection__placeholder")
+driver.execute_script('arguments[0].innerHTML = "15001";', cajaCP)
 
 
-import urllib.request
-from urllib.request import urlopen, Request
-#datos = urllib.request.urlopen("https://www.gadisline.com/").read().decode()
-#from bs4 import BeautifulSoup
-#soup =  BeautifulSoup(datos)
-#tags = soup("a")
-#for tag in tags:
-#	print(tag.get("href"))
+#Simulamos que vamos a introducir el código postal
+elementoSeleccionCP = driver.find_element_by_id('cl_postal_code')
+elementoSeleccionCP = driver.find_element_by_id('cl_postal_code')
+elementoSeleccionCP.send_keys ("")
+elementoSeleccionCP.send_keys(Keys.RETURN)
 
-headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.3"}
-reg_url = "https://www.gadisline.com/inicio/"
-req = Request(url=reg_url, headers=headers) 
-html = urlopen(req).read().decode()
-from bs4 import BeautifulSoup
-soup =  BeautifulSoup(html)
-tags = soup("a")
-for tag in tags:
-	print(tag.get("href"))
+#Para poder seleccionar el valor dentro del combobox, creamos un Select del propio combo, que luego nos 
+#permite usar el método "select_by_value". En este caso escogemos el código postal 15002
+valorCP = Select(driver.find_element_by_id('cl_postal_code'))
+valorCP.select_by_value("15002")
+
+#Una vez seleccionado el código postal, tenemos que simular la pulsación del botón naranja "CONTINUAR >"
+botonContinuar = driver.find_element_by_class_name('btn.principal_btn.btn_new_client.ladda-button').click()
+
+print("Entrando en la página de Gadisline donde se encuentran los precios...")
+
+
+time.sleep(2)
 
