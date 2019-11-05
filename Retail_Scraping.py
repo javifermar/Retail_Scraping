@@ -3,7 +3,6 @@
 
 
 
-
 import zipfile
 import os
 from selenium import webdriver
@@ -13,6 +12,7 @@ from datetime import datetime
 import sys
 from pathlib import Path
 import pandas as pd
+import numpy as np
 from selenium.webdriver.support.ui import Select
 
 
@@ -66,7 +66,6 @@ time.sleep(3)
 
 
 
-
 #Ahora hay un menú por categorías de productos al que podemos pinchar para acceder a los productos
 #ultramarinos
 url_pag_menu = driver.current_url
@@ -91,10 +90,8 @@ driver.execute_script("arguments[0].click();", a)
 
 
 
-
 print("La nueva dirección URL donde nos encontramos es:",driver.current_url)
 time.sleep(2)
-
 
 
 
@@ -105,7 +102,6 @@ agent = driver.execute_script("return navigator.userAgent")
 print("=====================================================================================================")
 print("El user-agent utilizado es:\n",agent,sep='')
 print("=====================================================================================================")
-time.sleep(3)
 
 
 
@@ -226,7 +222,6 @@ else:
 
 
 
-
 #Si hemos leído de la web la estructura de productos, la vamos a comparar con el dataframe 
 #que acabamos de cargar, para ver si hay categorías nuevas, o si alguna ha cambiado la URL
 
@@ -240,14 +235,14 @@ print("Nuevas categorias:",df_nuevascat.shape[0])
 #Renombramos las columnas
 columnas = ['Nivel1','Nivel2','Nivel3','URL','NumArticulos','UltActualizacion']
 df_nuevascat.columns = columnas
-df_nuevascat.head(10)
+
 
 #Para los que ya existían vamos a comprobar si han cambiado las URL, en ese caso las actualizamos
 #Al mezclar, las columnas coincidentes que no son la "clave" llevan el sufijo "_x" y "_y"
 merge_df = pd.merge(df, df_cat, on=['Nivel1','Nivel2','Nivel3'], how='inner', left_index=True)
 #Mantenemos los índices de 'df_cat' que son los que hay que actualizar
 filas_act_URL = merge_df[merge_df.URL_x != merge_df.URL_y].index
-merge_df.head(10)
+#merge_df.head(10)
 print("Categorías que han cambiado de URL:", filas_act_URL.shape[0])
 for fila in filas_act_URL:
     #Cambiar la URL de df_cat por la nueva
@@ -255,7 +250,7 @@ for fila in filas_act_URL:
     df_cat.loc[fila, 'URL'] = merge_df.loc[fila,'URL_x']
     df_cat.loc[fila, 'UltActualizacion'] = merge_df.loc[fila,'UltActualizacion_x']
     
-df_cat.head(10)
+
 
 #Finalmente concatenamos los dataframes
 df_cat = pd.concat([df_cat, df_nuevascat], axis = 0)
@@ -266,4 +261,97 @@ df_cat.to_csv (fich_categorias, index = None, header=True, sep=';', encoding='ut
 #Ya hemos terminado con los dataframes "merge_df" y "df_nuevascat"
 lst_delete = [merge_df, df_nuevascat]
 del lst_delete
+
+
+
+########################################################################
+# Vamos a la lectura de productos --> Saltar a diferentes páginas
+# Esas páginas están definidas en nuestro catálogo de categorías
+# Como escrapear toda la web llevaría muchisimo tiempo, vamos a elegir 
+# un valor para Nivel1 y hacer la prueba
+########################################################################
+################################################
+#Ejemplo con Nivel1 = "Panadería"
+################################################
+indices = df_cat[df_cat['Nivel1']=='Panadería'].index
+
+
+filas = 0
+
+for i in indices:
+    direccionURL = df_cat.loc[i, 'URL']
+    print (df_cat.loc[i, 'Nivel1'], df_cat.loc[i, 'Nivel2'], df_cat.loc[i, 'Nivel3'], direccionURL,sep='->')
+    driver.get(direccionURL)
+    
+    #Para cada URL cargada, vamos a hacer scroll hasta abajo de todo, para que se carguen todos los productos
+    tiempo_pausa_scroll = 1.5
+
+    # Get scroll height
+    ultimo_height = driver.execute_script("return document.body.scrollHeight")
+
+    while True:
+        # Hacemos scroll hacia abajo
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        
+        # Esperamos para que se cargue la página
+        time.sleep(tiempo_pausa_scroll)
+        
+        scroll = driver.find_element_by_tag_name('body').send_keys(Keys.END)
+        
+        # Esperamos para que se cargue la página
+        time.sleep(tiempo_pausa_scroll)
+        
+        # Volvemos a calcular la altura de la página después de haber ejecutado el scroll
+        # Si ha cambiado, continuamos, sino hemos acabado de hacer scroll
+        nuevo_height = driver.execute_script("return document.body.scrollHeight")
+        if nuevo_height == ultimo_height:
+            break
+        ultimo_height = nuevo_height
+    
+    
+    #En este punto podemos leer la página de los productos
+    elementos = driver.find_elements_by_xpath("//div[@class='product_container']")
+    #elementos = row_ul.find_elements_by_xpath("//li[@class='col-sm-3 grid_view ']")
+    #elementos = row_ul.find_elements_by_xpath("//a[@class='gtmProductClick']")
+    
+    productos = 0;
+    for row_div in elementos:
+        #En cada <div role="article" id="product_5410076" class="product_container">
+        # Buscamos la descripcion del artículo, el precio, el link del artículo, el precio por unidad de medida
+
+        cell_img = row_div.find_element_by_xpath(".//img[@class='img-responsive product_img opacity_hover']")
+        cell_name= row_div.find_element_by_xpath(".//a[@class='gtmProductClick']")
+        cell_price = row_div.find_element_by_xpath(".//p[@class='product_price']")
+        cell_price_measure = row_div.find_element_by_xpath(".//p[@class='product_unity_price']")
+
+        url_imagen = cell_img.get_attribute('src')
+        valor_id = int(cell_name.get_attribute('id'))
+        nombre = cell_name.get_attribute('text')
+        url_producto = cell_name.get_attribute('href')
+        pvp = cell_price.get_attribute('innerText')
+        pvp_unidad_medida = cell_price_measure.get_attribute('innerText')
+        dia_captura = datetime.now().strftime("%d/%m/%Y")
+        fecha_hora_act = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        #print (productos, valor_id, nombre, pvp, pvp_unidad_medida, url_producto,  url_imagen)
+        print (productos, valor_id, nombre, pvp, pvp_unidad_medida)
+        
+        filas += 1
+        productos += 1
+        
+    
+    #Actualizamos en el catálogo de categorías el nº de artículos
+    df_cat.loc[i, 'NumArticulos'] = productos
+    df_cat.loc[i, 'UltActualizacion'] = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    
+    #Tiempo para cargar la siguiente página
+    time.sleep(2)
+print("\n\n=============================================================================")
+print("El nº de artículos obtenidos en esta pasada han sido:",filas)
+print("=============================================================================\n")
+
+
+#Grabar en disco el dataframe de categorías que acabamos de actualizar
+df_cat.to_csv (fich_categorias, index = None, header=True, sep=';', encoding='utf-8')
+print("Se ha actualizado el fichero de categorías (NumArticulos y UltActualizacion)")
+print (df_cat.loc[indices][['Nivel1','Nivel2','Nivel3']])
 
