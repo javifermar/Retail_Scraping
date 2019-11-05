@@ -3,6 +3,7 @@
 
 
 
+
 import zipfile
 import os
 from selenium import webdriver
@@ -65,6 +66,7 @@ time.sleep(3)
 
 
 
+
 #Ahora hay un menú por categorías de productos al que podemos pinchar para acceder a los productos
 #ultramarinos
 url_pag_menu = driver.current_url
@@ -89,8 +91,11 @@ driver.execute_script("arguments[0].click();", a)
 
 
 
+
 print("La nueva dirección URL donde nos encontramos es:",driver.current_url)
 time.sleep(2)
+
+
 
 
 
@@ -100,6 +105,7 @@ agent = driver.execute_script("return navigator.userAgent")
 print("=====================================================================================================")
 print("El user-agent utilizado es:\n",agent,sep='')
 print("=====================================================================================================")
+time.sleep(3)
 
 
 
@@ -197,4 +203,67 @@ tFin = datetime.now()
 texto = 'Hemos invertido {:4.2f} segundos en obtener {:d} categorías (de 3 niveles)' .format((tFin-tInicio).total_seconds(), df.shape[0])
 print(texto)
 
+
+
+
+#Definimos el directorio de datos, y si no existe lo creamos
+directorioDatos = "Datos/"
+
+if not os.path.exists(directorioDatos):
+    os.makedirs(directorioDatos)
+
+print("Nº de categorías N1-N2-N3 de productos ==> Nº de filas obtenidas en la web es:", df.shape[0])
+
+fich_categorias = Path(directorioDatos + 'categorias.csv') 
+
+if fich_categorias.is_file(): 
+    df_cat = pd.read_csv(fich_categorias, header=0, sep=';', encoding='utf-8') 
+    print("Recuperado el dataframe guardado, el nº de categorías N1-N2-N3 es:", df_cat.shape[0])
+else:
+    print("Aún no existe un dataframe guardado con toda la información de las categorías de productos.")
+    df_cat = pd.DataFrame(columns=['Nivel1','Nivel2','Nivel3', 'URL', 'NumArticulos','UltActualizacion'])
+
+
+
+
+
+#Si hemos leído de la web la estructura de productos, la vamos a comparar con el dataframe 
+#que acabamos de cargar, para ver si hay categorías nuevas, o si alguna ha cambiado la URL
+
+#Al mezclar, las columnas coincidentes que no son la "clave" llevan el sufijo "_x" y "_y"
+merge_df = pd.merge(df, df_cat, on=['Nivel1','Nivel2','Nivel3'], how='left')
+
+#Nos quedamos con las columnas de "df" que no existen en el "df_cat"
+columnas = ['Nivel1','Nivel2','Nivel3','URL_x','NumArticulos_x','UltActualizacion_x']
+df_nuevascat = merge_df.loc[merge_df['NumArticulos_y'].isnull(), columnas]
+print("Nuevas categorias:",df_nuevascat.shape[0])
+#Renombramos las columnas
+columnas = ['Nivel1','Nivel2','Nivel3','URL','NumArticulos','UltActualizacion']
+df_nuevascat.columns = columnas
+df_nuevascat.head(10)
+
+#Para los que ya existían vamos a comprobar si han cambiado las URL, en ese caso las actualizamos
+#Al mezclar, las columnas coincidentes que no son la "clave" llevan el sufijo "_x" y "_y"
+merge_df = pd.merge(df, df_cat, on=['Nivel1','Nivel2','Nivel3'], how='inner', left_index=True)
+#Mantenemos los índices de 'df_cat' que son los que hay que actualizar
+filas_act_URL = merge_df[merge_df.URL_x != merge_df.URL_y].index
+merge_df.head(10)
+print("Categorías que han cambiado de URL:", filas_act_URL.shape[0])
+for fila in filas_act_URL:
+    #Cambiar la URL de df_cat por la nueva
+    print(df_cat.loc[fila, 'URL'], merge_df.loc[fila,'URL_x'])
+    df_cat.loc[fila, 'URL'] = merge_df.loc[fila,'URL_x']
+    df_cat.loc[fila, 'UltActualizacion'] = merge_df.loc[fila,'UltActualizacion_x']
+    
+df_cat.head(10)
+
+#Finalmente concatenamos los dataframes
+df_cat = pd.concat([df_cat, df_nuevascat], axis = 0)
+df_cat = df_cat.reset_index(drop=True)
+
+#Guardamos el nuevo dataframe actualizado de categorías
+df_cat.to_csv (fich_categorias, index = None, header=True, sep=';', encoding='utf-8')
+#Ya hemos terminado con los dataframes "merge_df" y "df_nuevascat"
+lst_delete = [merge_df, df_nuevascat]
+del lst_delete
 
