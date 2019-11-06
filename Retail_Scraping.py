@@ -3,6 +3,7 @@
 
 
 
+
 import zipfile
 import os
 from selenium import webdriver
@@ -66,6 +67,7 @@ time.sleep(3)
 
 
 
+
 #Ahora hay un menú por categorías de productos al que podemos pinchar para acceder a los productos
 #ultramarinos
 url_pag_menu = driver.current_url
@@ -90,8 +92,10 @@ driver.execute_script("arguments[0].click();", a)
 
 
 
+
 print("La nueva dirección URL donde nos encontramos es:",driver.current_url)
 time.sleep(2)
+
 
 
 
@@ -102,6 +106,7 @@ agent = driver.execute_script("return navigator.userAgent")
 print("=====================================================================================================")
 print("El user-agent utilizado es:\n",agent,sep='')
 print("=====================================================================================================")
+
 
 
 
@@ -202,6 +207,7 @@ print(texto)
 
 
 
+
 #Definimos el directorio de datos, y si no existe lo creamos
 directorioDatos = "Datos/"
 
@@ -222,6 +228,7 @@ else:
 
 
 
+
 #Si hemos leído de la web la estructura de productos, la vamos a comparar con el dataframe 
 #que acabamos de cargar, para ver si hay categorías nuevas, o si alguna ha cambiado la URL
 
@@ -235,14 +242,14 @@ print("Nuevas categorias:",df_nuevascat.shape[0])
 #Renombramos las columnas
 columnas = ['Nivel1','Nivel2','Nivel3','URL','NumArticulos','UltActualizacion']
 df_nuevascat.columns = columnas
-
+df_nuevascat.head(10)
 
 #Para los que ya existían vamos a comprobar si han cambiado las URL, en ese caso las actualizamos
 #Al mezclar, las columnas coincidentes que no son la "clave" llevan el sufijo "_x" y "_y"
 merge_df = pd.merge(df, df_cat, on=['Nivel1','Nivel2','Nivel3'], how='inner', left_index=True)
 #Mantenemos los índices de 'df_cat' que son los que hay que actualizar
 filas_act_URL = merge_df[merge_df.URL_x != merge_df.URL_y].index
-#merge_df.head(10)
+merge_df.head(10)
 print("Categorías que han cambiado de URL:", filas_act_URL.shape[0])
 for fila in filas_act_URL:
     #Cambiar la URL de df_cat por la nueva
@@ -250,7 +257,6 @@ for fila in filas_act_URL:
     df_cat.loc[fila, 'URL'] = merge_df.loc[fila,'URL_x']
     df_cat.loc[fila, 'UltActualizacion'] = merge_df.loc[fila,'UltActualizacion_x']
     
-
 
 #Finalmente concatenamos los dataframes
 df_cat = pd.concat([df_cat, df_nuevascat], axis = 0)
@@ -264,6 +270,42 @@ del lst_delete
 
 
 
+
+
+#Fichero de productos
+nombre_fich_productos = 'Datos/productos.csv'
+fich_productos = Path(nombre_fich_productos) 
+
+df_read_prod = pd.DataFrame(columns=['Id','Nombre','PVP', 'PVP_Unidad_Medida', 'Cantidad_Neta',                                     'URL_Producto', 'URL_Imagen', 'UltActualizacion'])
+
+if fich_productos.is_file(): 
+    df_prod = pd.read_csv(fich_productos, header=0, sep=';', encoding='utf-8') 
+    print("Recuperado el dataframe guardado de productos. El nº de productos es:", df_prod.shape[0])
+else:
+    print("Aún no existe un dataframe guardado con toda la información de los de productos.")
+    df_prod = df_read_prod.copy()
+
+
+
+
+
+#Fichero de histórico de precios de productos
+nombre_fich_histprecios = 'Datos/historico_precios.csv'
+fich_histprecios = Path(nombre_fich_histprecios) 
+
+if fich_histprecios.is_file(): 
+    df_hist_precios = pd.read_csv(fich_histprecios, header=0, sep=';', encoding='utf-8') 
+    print("Recuperado el dataframe guardado de histórico de precios. El nº registros es:", df_hist_precios.shape[0])
+else:
+    print("Aún no existe un dataframe guardado con toda la información de los de productos.")
+    df_hist_precios = pd.DataFrame(columns=['Id', 'DiaCaptura', 'PVP', 'PVP_Unidad_Medida', 'UltActualizacion'])
+
+df_hist_precios = df_hist_precios.astype({'Id':'int'})
+
+
+
+
+
 ########################################################################
 # Vamos a la lectura de productos --> Saltar a diferentes páginas
 # Esas páginas están definidas en nuestro catálogo de categorías
@@ -271,13 +313,15 @@ del lst_delete
 # un valor para Nivel1 y hacer la prueba
 ########################################################################
 ################################################
-#Ejemplo con Nivel1 = "Panadería"
+#Ejemplo con Nivel1 = "Panadería" o "Bazar"
 ################################################
-indices = df_cat[df_cat['Nivel1']=='Panadería'].index
 
+#indices = df_cat[df_cat['Nivel1']=='Panadería'].index
+indices = df_cat[df_cat['Nivel1']=='Bazar'].index
 
 filas = 0
-
+histprecios_filasnuevas = 0
+histprecios_filaseditadas = 0
 for i in indices:
     direccionURL = df_cat.loc[i, 'URL']
     print (df_cat.loc[i, 'Nivel1'], df_cat.loc[i, 'Nivel2'], df_cat.loc[i, 'Nivel3'], direccionURL,sep='->')
@@ -313,7 +357,7 @@ for i in indices:
     elementos = driver.find_elements_by_xpath("//div[@class='product_container']")
     #elementos = row_ul.find_elements_by_xpath("//li[@class='col-sm-3 grid_view ']")
     #elementos = row_ul.find_elements_by_xpath("//a[@class='gtmProductClick']")
-    
+
     productos = 0;
     for row_div in elementos:
         #En cada <div role="article" id="product_5410076" class="product_container">
@@ -334,6 +378,19 @@ for i in indices:
         fecha_hora_act = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
         #print (productos, valor_id, nombre, pvp, pvp_unidad_medida, url_producto,  url_imagen)
         print (productos, valor_id, nombre, pvp, pvp_unidad_medida)
+        df_read_prod.loc[filas] = valor_id,nombre,pvp,pvp_unidad_medida,0,url_producto,url_imagen,fecha_hora_act
+        
+        #Comprobar si existe en el histórico de precios (coincidencia Id y DiaCaptura)
+        filahist = df_hist_precios.loc[(df_hist_precios['Id']==valor_id) &                                        (df_hist_precios['DiaCaptura']==dia_captura)].index
+        if (filahist.empty):
+            filahist = df_hist_precios.shape[0]
+            df_hist_precios.loc[filahist]= valor_id,dia_captura,pvp,pvp_unidad_medida, fecha_hora_act
+            histprecios_filasnuevas += 1
+        else:
+            df_hist_precios.loc[filahist,'PVP'] = pvp
+            df_hist_precios.loc[filahist,'PVP_Unidad_Medida'] = pvp_unidad_medida
+            df_hist_precios.loc[filahist,'UltActualizacion'] = fecha_hora_act
+            histprecios_filaseditadas += 1
         
         filas += 1
         productos += 1
@@ -346,12 +403,65 @@ for i in indices:
     #Tiempo para cargar la siguiente página
     time.sleep(2)
 print("\n\n=============================================================================")
-print("El nº de artículos obtenidos en esta pasada han sido:",filas)
+print("El nº de artículos obtenidos en esta pasada han sido:",df_read_prod.shape[0])
 print("=============================================================================\n")
+
+
+
 
 
 #Grabar en disco el dataframe de categorías que acabamos de actualizar
 df_cat.to_csv (fich_categorias, index = None, header=True, sep=';', encoding='utf-8')
 print("Se ha actualizado el fichero de categorías (NumArticulos y UltActualizacion)")
 print (df_cat.loc[indices][['Nivel1','Nivel2','Nivel3']])
+
+#Grabar en disco el histórico de precios
+df_hist_precios.to_csv (fich_histprecios, index = None, header=True, sep=';', encoding='utf-8')
+print("Histórico de precios. Filas Nuevas %d. Filas Editadas %d" % (histprecios_filasnuevas, histprecios_filaseditadas))
+
+
+
+
+
+# Guardar el dataframe de artículos
+
+df_prod = df_prod.astype({'Id':'int'})
+df_read_prod = df_read_prod.astype({'Id':'int'})
+
+#Editar las filas que sí existen, es decir que ya estaban en el DataFrame
+#Al mezclar, las columnas coincidentes que no son la "clave" llevan el sufijo "_x" y "_y"
+merge_df = pd.merge(df_read_prod, df_prod, on=['Id'], how='inner', left_index=True)
+print("Artículos a actualizar:",merge_df.shape[0])
+#Mantenemos los índices de 'df_prod' que son los que hay que actualizar
+for fila in merge_df.index:
+    #Actualizar los valores
+    df_prod.loc[fila,'Nombre'] = merge_df.loc[fila,'Nombre_x']
+    df_prod.loc[fila,'PVP'] = merge_df.loc[fila,'PVP_x']
+    df_prod.loc[fila,'PVP_Unidad_Medida'] = merge_df.loc[fila,'PVP_Unidad_Medida_x']
+    df_prod.loc[fila,'Cantidad_Neta'] = merge_df.loc[fila,'Cantidad_Neta_x']
+    df_prod.loc[fila,'URL_Producto'] = merge_df.loc[fila,'URL_Producto_x']
+    df_prod.loc[fila,'URL_Imagen'] = merge_df.loc[fila,'URL_Imagen_x']
+    df_prod.loc[fila,'UltActualizacion'] = merge_df.loc[fila,'UltActualizacion_x']
+
+#Ahora vamos a buscar nuevos elementos
+#Al mezclar, las columnas coincidentes que no son la "clave" llevan el sufijo "_x" y "_y"
+merge_df = pd.merge(df_read_prod, df_prod, on=['Id'], how='left')
+
+#Nos quedamos con las columnas de "df_read_prod" que no existen en el "df_prod"
+columnas = ['Id','Nombre_x','PVP_x','PVP_Unidad_Medida_x','Cantidad_Neta_x',            'URL_Producto_x','URL_Imagen_x', 'UltActualizacion_x']
+df_nuevosprod = merge_df.loc[merge_df['Nombre_y'].isnull(), columnas]
+print("Nuevos artículos:",df_nuevosprod.shape[0])
+
+if (df_nuevosprod.shape[0] > 0):
+    #Renombramos las columnas
+    columnas = ['Id','Nombre','PVP','PVP_Unidad_Medida','Cantidad_Neta','URL_Producto','URL_Imagen','UltActualizacion']
+    df_nuevosprod.columns = columnas
+    df_nuevosprod.head(10)
+
+    #Finalmente concatenamos los dataframes
+    df_prod = pd.concat([df_prod, df_nuevosprod], axis = 0)
+
+df_prod = df_prod.reset_index(drop=True)
+#Guardamos el nuevo dataframe actualizado de productos
+df_prod.to_csv (nombre_fich_productos, index = None, header=True, sep=';', encoding='utf-8')
 
