@@ -9,4 +9,6 @@ Las librerías necesarias son las siguientes:
 Para proceder a su ejecución :
 python Retail_Scraping.py
 
-Como resultado se obtienen 5 datasets con la siguiente estructura.
+Como resultado se obtienen 5 datasets con la siguiente estructura. Ver wiki para más información.
+	
+
