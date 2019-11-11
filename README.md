@@ -6,8 +6,31 @@ Finalmente se ha desarrollado un histórico de precios, donde se almacenarán lo
 
 Las librerías necesarias son las siguientes:
 
+from selenium import webdriver
+import time
+import pandas as pd
+import numpy as np
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import Select
+from datetime import datetime
+import sys
+from datetime import datetime
+import os
+from pathlib import Path
+from bs4 import BeautifulSoup
+from pathlib import Path
+
+
 Para proceder a su ejecución :
-python Retail_Scraping.py
+ - Es preciso para la correcta ejecución de este proyecto, localizar el archivo chromedriver.exe que se puede encontrar en la carpeta Chromedriver de este proyecto en la ruta local
+c:\Chromedriver
+
+ - Verificar que se tienen instaladas las librerías indicadas anteriormente.
+ 
+ - Ejecutar python Retail_Scraping.py
+
+NOTA: Se recomienda inicialmente la ejecución sobre una categoría con un número moderado de elementos. Por ejemplo, Panadería.
+
 
 Como resultado se obtienen 5 datasets con la siguiente estructura. Ver wiki para más información.
 	
