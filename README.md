@@ -4,7 +4,7 @@ Este proyecto realiza una extracción limitada de información de la web gadisli
 En una primera fase se escanea toda la estructura de productos ofertados y permite seleccionar una categoría en la que profundizar y obtener información más detallada. Esto es, nos permite descargar todos los productos de la categoría seleccionada detallando su precio, precio unitario, cantidad neta, la url de acceso y la url que obtiene su imagen. También se obtiene la información nutricional del producto y sus ingredientes.
 Finalmente se ha desarrollado un histórico de precios, donde se almacenarán los precios descargados de la categoría seleccionada con la fecha actual, permitiendo actualizaciones diarias.
 
-Las librerías necesarias son las siguientes:
+**Las librerías necesarias son las siguientes:
 
 from selenium import webdriver
 
@@ -33,7 +33,7 @@ from bs4 import BeautifulSoup
 from pathlib import Path
 
 
-Para proceder a su ejecución :
+**Para proceder a su ejecución :
  - Es preciso para la correcta ejecución de este proyecto, localizar el archivo chromedriver.exe que se puede encontrar en la carpeta Chromedriver de este proyecto en la ruta local
 c:\Chromedriver
 
@@ -44,6 +44,6 @@ c:\Chromedriver
 NOTA: Se recomienda inicialmente la ejecución sobre una categoría con un número moderado de elementos. Por ejemplo, Panadería.
 
 
-Como resultado se obtienen 5 datasets con la siguiente estructura. Ver wiki para más información.
+**Como resultado se obtienen 5 datasets con la siguiente estructura. Ver wiki para más información.
 	
 
