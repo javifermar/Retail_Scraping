@@ -32,6 +32,9 @@ from bs4 import BeautifulSoup
 
 from pathlib import Path
 
+import requests
+
+from urllib.request import Request, urlopen
 
 **Para proceder a su ejecución :
  - Es preciso para la correcta ejecución de este proyecto, localizar el archivo chromedriver.exe que se puede encontrar en la carpeta Chromedriver de este proyecto en la ruta local
