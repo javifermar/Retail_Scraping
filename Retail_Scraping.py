@@ -46,6 +46,7 @@ else:
 #### Definimos el directorio de datos y los ficheros
 ######################################################
 directorio_datos = "Datos/"
+directorio_imagenes = "Imagenes/"
 f_categorias_csv = 'categorias.csv'
 f_prod_csv = 'productos.csv'
 f_hstprec_csv = 'historico_precios.csv'
@@ -162,7 +163,7 @@ while True:
                 print("==================================================================")
                 print('Productos N1{} N2{} N3{}: '.format(catNivel1, catNivel2, catNivel3))
                 print("==================================================================")
-                productos = Producto(drv_webdriver=driver, directorio_datos=directorio_datos,                                     f_prod_csv=f_prod_csv, f_histprecios_csv=f_hstprec_csv,                                     f_ingredientes=f_ingredientes_csv, f_nutricional=f_nutricional_csv)
+                productos = Producto(drv_webdriver=driver, ruta_datos=directorio_datos,                                     ruta_imagenes=directorio_imagenes,                                     f_prod_csv=f_prod_csv, f_histprecios_csv=f_hstprec_csv,                                     f_ingredientes=f_ingredientes_csv, f_nutricional=f_nutricional_csv)
                 print (productos.obtener_productos_web(df_categorias_buscar=categorias.df_cat_csv,                                       genera_historico_precios=True,                                       N1=catNivel1,N2=catNivel2,N3=catNivel3))
                 #Grabamos la actualizacion de categorías
                 categorias.grabar_categorias(omitir_carga_csv=True)

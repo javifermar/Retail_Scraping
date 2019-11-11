@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[14]:
+# In[3]:
 
 
 from selenium import webdriver
@@ -13,12 +13,16 @@ import numpy as np
 import os
 from pathlib import Path
 from DatosComplementariosProducto import DatosComplementariosProducto 
+import requests
+from urllib.request import Request, urlopen
+
 
 class Producto(object):
     """Clase para los de productos"""
-    def __init__(self, drv_webdriver, directorio_datos, f_prod_csv, f_histprecios_csv, f_ingredientes, f_nutricional):
+    def __init__(self, drv_webdriver, ruta_datos, ruta_imagenes, f_prod_csv, f_histprecios_csv, f_ingredientes, f_nutricional):
         self._webdriver = drv_webdriver
-        self._directorio_datos = directorio_datos
+        self._directorio_datos = ruta_datos
+        self._directorio_imagenes = ruta_imagenes
         self._fich_prod_csv = f_prod_csv
         self._fich_hstprec_csv = f_histprecios_csv
         self._fich_ingredientes_csv = f_ingredientes
@@ -36,6 +40,7 @@ class Producto(object):
         
         self._df_nutricional_vacio = pd.DataFrame(columns=['Id', 'AnalisisNutricional', 'UltActualizacion'])
         self.df_nutricional = (self._df_nutricional_vacio).copy
+        self._user_agent = ''
     #####################################################################################
     # Método: "obtener_productos_web"
     # Se le pueden pasar los 3 niveles de categorías (N1, N2 y N3)
@@ -53,9 +58,17 @@ class Producto(object):
             print(self.descripcion_error)
             return(False)
         
+        #######################################################################
+        # Obtenemos el user-agent
+        #######################################################################
+        self._user_agent = self._webdriver.execute_script("return navigator.userAgent")
+        
+        #######################################################################
+        # Si vamos a generar el histórico de precios, cargar el CSV 
+        #######################################################################
         if (genera_historico_precios):
             self._recuperar_fichero_historico_precios()
-
+            
         self.df_prod_web = (self._df_prod_vacio).copy()
         #######################################################################
         # Aplicar los filtros de categorias N1, N2 y N3
@@ -71,7 +84,6 @@ class Producto(object):
             condN3 = df_categorias_buscar['Nivel3']==N3
         
         indices = df_categorias_buscar[condN1 & condN2 & condN3].index
-        
         for i in indices:
             #Obtenemos la URL donde están los productos de la categoría 'actual'
             url_categoria = df_categorias_buscar.loc[i, 'URL']
@@ -121,7 +133,15 @@ class Producto(object):
         #Al mezclar, nos quedamos con el indices 
         filas_productos = pd.merge(self.df_prod_web, self.df_prod_csv, on=['Id'], how='inner', left_index=True).index
         for i in (filas_productos):
-            #Obtenemos la URL donde están los productos de la categoría 'actual'
+            #Obtener el id_producto
+            valor_id = self.df_prod_csv.loc[i, 'Id']
+            #Obtenemos la URL de la imagen
+            url_imagen = self.df_prod_csv.loc[i, 'URL_Imagen'].strip()
+            
+            if (url_imagen):
+                self.descargar_imagen_url(valor_id, url_imagen)
+            
+            #Obtenemos la URL del producto
             url_producto = self.df_prod_csv.loc[i, 'URL_Producto']
             datoscomp = DatosComplementariosProducto(self._webdriver, url_producto)
             print("Obteniendo datos del artículo: {}...".format(self.df_prod_csv.loc[i, 'Nombre']))
@@ -129,7 +149,6 @@ class Producto(object):
                 #print(self.df_prod_csv.loc[i, 'Nombre'],"Cantidad neta:",datoscomp.cantidad_neta)
                 #print("Ingredientes:",datoscomp.ingredientes)
                 #print("Análisis Nutricional:",datoscomp.analisis_nutricional)
-                valor_id = self.df_prod_csv.loc[i, 'Id']
                 cantidad_neta = datoscomp.cantidad_neta.strip()
                 ingredientes = datoscomp.ingredientes.strip()
                 nutricional = datoscomp.analisis_nutricional.strip()
@@ -181,6 +200,26 @@ class Producto(object):
             self.df_nutricional.to_csv(fich_nutricional, index = None, header=True, sep=';', encoding='utf-8')
             print("Fichero de análisis nutricional de productos. Filas Nuevas %d. Filas Editadas %d" %                   (nut_filasnuevas, nut_filaseditadas))
         return(True)
+    
+    #####################################################################################
+    # Método: "descargar_imagen_url"
+    # Dada una URL de la imagen, y el ID de producto (para el nombre)
+    #####################################################################################
+    def descargar_imagen_url(self, id_producto, url_imagen):
+         #Comprobamos el directorio de imagenes, y si no existe lo creamos
+        if not os.path.exists(self._directorio_imagenes):
+            os.makedirs(self._directorio_imagenes)
+        #Lanzamos la petición de abrir la url imagen, cambiando el user-agent
+        req = Request(url_imagen)
+        req.add_header('user-agent', self._user_agent)
+        content = urlopen(req).read()
+        #Generamos el nombre del fichero
+        fichero= self._directorio_imagenes + str(id_producto) + '.jpg'
+        
+        #Generamos el fichero con el contenido que hemos leído
+        f = open(fichero, 'bw')
+        f.write(content)
+        f.close()
     #####################################################################################
     # Método: "acceder_url_categoria"
     # Dada una URL (de categoría)
