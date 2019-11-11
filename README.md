@@ -7,17 +7,29 @@ Finalmente se ha desarrollado un histórico de precios, donde se almacenarán lo
 Las librerías necesarias son las siguientes:
 
 from selenium import webdriver
+
 import time
+
 import pandas as pd
+
 import numpy as np
+
 from selenium.webdriver.common.keys import Keys
+
 from selenium.webdriver.support.ui import Select
+
 from datetime import datetime
+
 import sys
+
 from datetime import datetime
+
 import os
+
 from pathlib import Path
+
 from bs4 import BeautifulSoup
+
 from pathlib import Path
 
 
