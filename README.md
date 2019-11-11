@@ -46,7 +46,6 @@ c:\Chromedriver
 
 NOTA: Se recomienda inicialmente la ejecución sobre una categoría con un número moderado de elementos. Por ejemplo, Panadería.
 
-![menu]Chromedriver/(Chromedriver/pantallazo menu.PNG)
 
 **Como resultado se obtienen 5 datasets con la siguiente estructura. Ver wiki para más información.
 	
